@@ -17,26 +17,27 @@ modstorage of ip == 0 not checked yet
 
 --  Add the main ipcheckup function
 function vps_blocker.check_ip(name, ip)
-  --  First nastyhosts request
-  storage:set_int(ip, 3)
-  local req = {
-    ["url"] = "http://v1.nastyhosts.com/"..ip
-  }
-  local callback = function(result)
-    local data = minetest.parse_json(result.data)
-    if result.completed and result.succeeded and data and data.status == 200 then --  Correct request
-      if data.suggestion == "deny" then
-        storage:set_int(ip, 2)
-      elseif storage:get_int(ip) ~= 2 then
-        storage:set_int(ip, 1)
+  --  First nastyhosts request only if iphub is not used
+  if not iphub_key then
+    storage:set_int(ip, 3)
+    local req = {
+      ["url"] = "http://v1.nastyhosts.com/"..ip
+    }
+    local callback = function(result)
+      local data = minetest.parse_json(result.data)
+      if result.completed and result.succeeded and data and data.status == 200 then --  Correct request
+        if data.suggestion == "deny" then
+          storage:set_int(ip, 2)
+        elseif storage:get_int(ip) ~= 2 then
+          storage:set_int(ip, 1)
+        end
+        vps_blocker.handle_player(name, ip)
+      else minetest.log("error", "vps_blocker: Incorrect request!")
       end
-      vps_blocker.handle_player(name, ip)
-    else minetest.log("error", "vps_blocker: Incorrect request!")
     end
-  end
-  http.fetch(req, callback)
-  --  Second may iphub request
-  if iphub_key then
+    http.fetch(req, callback)
+  
+  else --  Second may iphub request
     local ireq = {
       ["url"] = "http://v2.api.iphub.info/ip/"..ip,
       ["extra_headers"] = {"X-Key: "..iphub_key}
