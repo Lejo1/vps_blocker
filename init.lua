@@ -69,7 +69,7 @@ function vps_blocker.handle_player(name, ip)
     local player = minetest.get_player_by_name(name)
     if player then
       minetest.kick_player(name, kick_message)
-    else return true
+    else return kick_message
     end
   end
 end
