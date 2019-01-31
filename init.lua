@@ -44,7 +44,7 @@ function vps_blocker.check_ip(name, ip)
     local icallback = function(result)
       local data = minetest.parse_json(result.data)
       if result.completed and result.succeeded and data and data.block then --  Correct request
-        if data.block >= 1 then
+        if data.block == 1 then
           storage:set_int(ip, 2)
         elseif storage:get_int(ip) ~= 2 then
           storage:set_int(ip, 1)
