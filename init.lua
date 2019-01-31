@@ -59,7 +59,7 @@ end
 
 --  Add a function which handels what do do(check, kick, nth...)
 function vps_blocker.handle_player(name, ip)
-  if not name or not ip or storage:get_int(ip) == 1 then
+  if not name or not ip or storage:get_int(ip) == 1 or storage:get_int(name) == 1 then
     return
   end
   if storage:get_int(ip) == 0 then
@@ -81,3 +81,21 @@ minetest.register_on_joinplayer(function(player)
   local ip = minetest.get_player_ip(name)
   vps_blocker.handle_player(name, ip)
 end)
+
+--  Add a command to whitelist players
+minetest.register_chatcommand("vps_wl", {
+  description = "Allow a player to use vps services.",
+  params = "<add or remove> <name or ip>",
+  privs = {server=true},
+  func = function(name, params)
+    local p = string.split(params, " ")
+    if p[1] == "add" then
+      storage:set_int(p[2], 1)
+      return true, "Added "..p[2].." to the whitelist."
+    elseif p[1] == "remove" then
+      storage:set_int(p[2], 0)
+      return true, "Removed "..p[2].." from the whitelist."
+    else return false, "Invalid Input"
+    end
+  end
+})

@@ -15,6 +15,11 @@ Set the kick message:
 
 vps_kick_message = "You are using a proxy, vpn or other hosting services, please disable them to play on this server."
 
+Commands
+--------
+
+Use /vps_wl <add or remove> <name or ip> to allow people using vps.
+
 License
 -------
 
