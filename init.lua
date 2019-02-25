@@ -7,19 +7,18 @@ local kick_message = minetest.settings:get("vps_kick_message") or "You are using
 local iphub_key = minetest.settings:get("iphub_key")
 
 vps_blocker = {}
+local cache = {}
 local storage = minetest.get_mod_storage()
 --[[
 modstorage of ip == 0 not checked yet
                  == 1 checked allow
                  == 2 checked deny
-                 == 3 checking
 ]]
 
 --  Add the main ipcheckup function
 function vps_blocker.check_ip(name, ip)
   --  First nastyhosts request only if iphub is not used
   if not iphub_key then
-    storage:set_int(ip, 3)
     local req = {
       ["url"] = "http://v1.nastyhosts.com/"..ip
     }
@@ -27,16 +26,16 @@ function vps_blocker.check_ip(name, ip)
       local data = minetest.parse_json(result.data)
       if result.completed and result.succeeded and data and data.status == 200 then --  Correct request
         if data.suggestion == "deny" then
-          storage:set_int(ip, 2)
-        elseif storage:get_int(ip) ~= 2 then
-          storage:set_int(ip, 1)
+          cache[ip] = 2
+        elseif cache[ip] ~= 2 then
+          cache[ip] = 1
         end
         vps_blocker.handle_player(name, ip)
       else minetest.log("error", "vps_blocker: Incorrect request!")
       end
     end
     http.fetch(req, callback)
-  
+
   else --  Second may iphub request
     local ireq = {
       ["url"] = "http://v2.api.iphub.info/ip/"..ip,
@@ -46,9 +45,9 @@ function vps_blocker.check_ip(name, ip)
       local data = minetest.parse_json(result.data)
       if result.completed and result.succeeded and data and data.block then --  Correct request
         if data.block == 1 then
-          storage:set_int(ip, 2)
-        elseif storage:get_int(ip) ~= 2 then
-          storage:set_int(ip, 1)
+          cache[ip] = 2
+        elseif cache[ip] ~= 2 then
+          cache[ip] = 1
         end
         vps_blocker.handle_player(name, ip)
       else minetest.log("error", "vps_blocker: Incorrect request!")
@@ -60,13 +59,13 @@ end
 
 --  Add a function which handels what do do(check, kick, nth...)
 function vps_blocker.handle_player(name, ip)
-  if not name or not ip or storage:get_int(ip) == 1 or storage:get_int(name) == 1 then
+  if not name or not ip or cache[ip] == 1 or storage:get_int(name) == 1 then
     return
   end
-  if storage:get_int(ip) == 0 then
+  if cache[ip] == 0 then
     vps_blocker.check_ip(name, ip)
   end
-  if storage:get_int(ip) == 2 then
+  if cache[ip] == 2 then
     local player = minetest.get_player_by_name(name)
     if player then
       minetest.kick_player(name, kick_message)
