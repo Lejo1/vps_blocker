@@ -62,7 +62,7 @@ function vps_blocker.handle_player(name, ip)
   if not name or not ip or cache[ip] == 1 or storage:get_int(name) == 1 then
     return
   end
-  if cache[ip] == 0 then
+  if not cache[ip] then
     vps_blocker.check_ip(name, ip)
   end
   if cache[ip] == 2 then
