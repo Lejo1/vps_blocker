@@ -5,12 +5,13 @@ assert(http ~= nil, "You need to add vps_blocker to secure.http_mods")
 
 local kick_message = minetest.settings:get("vps_kick_message") or "You are using a proxy, vpn or other hosting services, please disable them to play on this server."
 local iphub_key = minetest.settings:get("iphub_key")
+local iphub_limit_reaced = false
 
 vps_blocker = {}
 local cache = {}
 local storage = minetest.get_mod_storage()
 --[[
-modstorage of ip == 0 not checked yet
+cache of ip == nil not checked yet
                  == 1 checked allow
                  == 2 checked deny
 ]]
@@ -52,6 +53,10 @@ function vps_blocker.check_ip(name, ip)
         vps_blocker.handle_player(name, ip)
       else minetest.log("error", "vps_blocker: Incorrect request!")
       end
+      if result.code == 429 then --  Iphub request limit reached!
+        minetest.log("error", "vps_blocker: IPhub Limit reaced! Checking Stoped until next restart!")
+        iphub_limit_reaced = true
+      end
     end
     http.fetch(ireq, icallback)
   end
@@ -59,7 +64,7 @@ end
 
 --  Add a function which handels what do do(check, kick, nth...)
 function vps_blocker.handle_player(name, ip)
-  if not name or not ip or cache[ip] == 1 or storage:get_int(name) == 1 then
+  if not name or not ip or cache[ip] == 1 or storage:get_int(name) == 1 or iphub_limit_reaced then
     return
   end
   if not cache[ip] then
