@@ -90,7 +90,7 @@ end)
 --  Add a command to whitelist players
 minetest.register_chatcommand("vps_wl", {
   description = "Allow a player to use vps services.",
-  params = "<add or remove> <name or ip>",
+  params = "<add or remove> <name>",
   privs = {server=true},
   func = function(name, params)
     local p = string.split(params, " ")
