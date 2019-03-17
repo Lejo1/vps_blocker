@@ -5,7 +5,7 @@ assert(http ~= nil, "You need to add vps_blocker to secure.http_mods")
 
 local kick_message = minetest.settings:get("vps_kick_message") or "You are using a proxy, vpn or other hosting services, please disable them to play on this server."
 local iphub_key = minetest.settings:get("iphub_key")
-local iphub_limit_reaced = false
+local iphub_limit_reached = false
 
 vps_blocker = {}
 local cache = {}
@@ -19,7 +19,7 @@ cache of ip == nil not checked yet
 --  Add the main ipcheckup function
 function vps_blocker.check_ip(name, ip)
   --  First nastyhosts request only if iphub is not used
-  if not iphub_key then
+  if not iphub_key or iphub_limit_reached then
     local req = {
       ["url"] = "http://v1.nastyhosts.com/"..ip
     }
@@ -32,7 +32,7 @@ function vps_blocker.check_ip(name, ip)
           cache[ip] = 1
         end
         vps_blocker.handle_player(name, ip)
-      else minetest.log("error", "vps_blocker: Incorrect request!")
+      else minetest.log("error", "vps_blocker: Incorrect nastyhosts request!")
       end
     end
     http.fetch(req, callback)
@@ -51,11 +51,11 @@ function vps_blocker.check_ip(name, ip)
           cache[ip] = 1
         end
         vps_blocker.handle_player(name, ip)
-      else minetest.log("error", "vps_blocker: Incorrect request!")
+      else minetest.log("error", "vps_blocker: Incorrect iphub request!")
       end
       if result.code == 429 then --  Iphub request limit reached!
-        minetest.log("error", "vps_blocker: IPhub Limit reaced! Checking Stoped until next restart!")
-        iphub_limit_reaced = true
+        minetest.log("error", "vps_blocker: IPhub Limit reached! Checking with nastyhosts instead until next restart!")
+        iphub_limit_reached = true
       end
     end
     http.fetch(ireq, icallback)
@@ -64,7 +64,7 @@ end
 
 --  Add a function which handels what do do(check, kick, nth...)
 function vps_blocker.handle_player(name, ip)
-  if not name or not ip or cache[ip] == 1 or storage:get_int(name) == 1 or iphub_limit_reaced then
+  if not name or not ip or cache[ip] == 1 or storage:get_int(name) == 1 then
     return
   end
   if not cache[ip] then
