@@ -26,10 +26,11 @@ function vps_blocker.check_ip(name, ip)
     local callback = function(result)
       local data = minetest.parse_json(result.data)
       if result.completed and result.succeeded and data and data.status == 200 then --  Correct request
+        local iphash = minetest.sha1(ip)
         if data.suggestion == "deny" then
-          cache[ip] = 2
-        elseif cache[ip] ~= 2 then
-          cache[ip] = 1
+          cache[iphash] = 2
+        elseif cache[iphash] ~= 2 then
+          cache[iphash] = 1
         end
         vps_blocker.handle_player(name, ip)
       else minetest.log("error", "vps_blocker: Incorrect nastyhosts request!")
@@ -45,10 +46,11 @@ function vps_blocker.check_ip(name, ip)
     local icallback = function(result)
       local data = minetest.parse_json(result.data)
       if result.completed and result.succeeded and data and data.block then --  Correct request
+        local iphash = minetest.sha1(ip)
         if data.block == 1 then
-          cache[ip] = 2
-        elseif cache[ip] ~= 2 then
-          cache[ip] = 1
+          cache[iphash] = 2
+        elseif cache[iphash] ~= 2 then
+          cache[iphash] = 1
         end
         vps_blocker.handle_player(name, ip)
       else minetest.log("error", "vps_blocker: Incorrect iphub request!")
@@ -64,13 +66,14 @@ end
 
 --  Add a function which handels what do do(check, kick, nth...)
 function vps_blocker.handle_player(name, ip)
-  if not name or not ip or cache[ip] == 1 or storage:get_int(name) == 1 then
+  local iphash = minetest.sha1(ip)
+  if not name or not ip or not iphash or cache[iphash] == 1 or storage:get_int(name) == 1 then
     return
   end
-  if not cache[ip] then
+  if not cache[iphash] then
     vps_blocker.check_ip(name, ip)
   end
-  if cache[ip] == 2 then
+  if cache[iphash] == 2 then
     local player = minetest.get_player_by_name(name)
     if player then
       minetest.kick_player(name, kick_message)
