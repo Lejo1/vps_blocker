@@ -26,4 +26,4 @@ License
 The idea for the mod is taken from https://github.com/red-001/block_vps but it's a complete redo of it.
 
 Created by [Lejo](https://github.com/Lejo1)
-License: CC0
+License: MIT
