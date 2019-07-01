@@ -66,8 +66,11 @@ end
 
 --  Add a function which handels what do do(check, kick, nth...)
 function vps_blocker.handle_player(name, ip)
+  if not ip then
+    return
+  end
   local iphash = minetest.sha1(ip)
-  if not name or not ip or not iphash or cache[iphash] == 1 or storage:get_int(name) == 1 then
+  if not name or not iphash or cache[iphash] == 1 or storage:get_int(name) == 1 then
     return
   end
   if not cache[iphash] then
