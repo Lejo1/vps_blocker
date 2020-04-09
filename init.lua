@@ -33,7 +33,7 @@ function vps_blocker.check_ip(name, ip)
           cache[iphash] = 1
         end
         vps_blocker.handle_player(name, ip)
-      else minetest.log("error", "vps_blocker: Incorrect nastyhosts request!")
+      else minetest.log("error", "vps_blocker: Incorrect nastyhosts request while checking "..name.." ["..ip.."]!")
       end
     end
     http.fetch(req, callback)
@@ -53,7 +53,7 @@ function vps_blocker.check_ip(name, ip)
           cache[iphash] = 1
         end
         vps_blocker.handle_player(name, ip)
-      else minetest.log("error", "vps_blocker: Incorrect iphub request!")
+      else minetest.log("error", "vps_blocker: Incorrect iphub request while checking "..name.." ["..ip.."]!")
       end
       if result.code == 429 then --  Iphub request limit reached!
         minetest.log("error", "vps_blocker: IPhub Limit reached! Checking with nastyhosts instead until next restart!")
@@ -66,17 +66,22 @@ end
 
 --  Add a function which handels what do do(check, kick, nth...)
 function vps_blocker.handle_player(name, ip)
-  if not ip then
+  if not ip or not name then
     return
   end
   local iphash = minetest.sha1(ip)
-  if not name or not iphash or cache[iphash] == 1 or storage:get_int(name) == 1 then
+  if not iphash then
+    return
+  end
+  if cache[iphash] == 1 or storage:get_int(name) == 1 then
+    minetest.log("action", "vps_blocker: Passing good-ip-player "..name.." ["..ip.."]")
     return
   end
   if not cache[iphash] then
     vps_blocker.check_ip(name, ip)
   end
   if cache[iphash] == 2 then
+    minetest.log("action", "vps_blocker: Kicking bad-ip-player "..name.." ["..ip.."]")
     local player = minetest.get_player_by_name(name)
     if player then
       minetest.kick_player(name, kick_message)
