@@ -97,7 +97,10 @@ function vps_blocker.handle_player(name, ip)
   if cache[iphash] == 2 then
     local player = minetest.get_player_by_name(name)
     if player then
-      minetest.kick_player(name, kick_message)
+      --  Kick after a server step, to prevent other on_joinplayer to crash
+      minetest.after(0, function()
+        minetest.kick_player(name, kick_message)
+      end)
     else return kick_message
     end
   end
