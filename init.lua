@@ -1,11 +1,9 @@
---  Declear some default tables
+--  Vps Blocker
 
 local http = minetest.request_http_api()
 assert(http ~= nil, "You need to add vps_blocker to secure.http_mods")
 
 local kick_message = minetest.settings:get("vps_kick_message") or "You are using a proxy, vpn or other hosting services, please disable them to play on this server."
-local iphub_key = minetest.settings:get("iphub_key")
-local iphub_limit_reached = false
 
 vps_blocker = {}
 local cache = {}
@@ -16,51 +14,67 @@ cache of ip == nil not checked yet
                  == 2 checked deny
 ]]
 
---  Add the main ipcheckup function
-function vps_blocker.check_ip(name, ip)
-  --  First nastyhosts request only if iphub is not used
-  if not iphub_key or iphub_limit_reached then
-    local req = {
-      ["url"] = "http://v1.nastyhosts.com/"..ip
-    }
-    local callback = function(result)
-      local data = minetest.parse_json(result.data)
-      if result.completed and result.succeeded and data and data.status == 200 then --  Correct request
-        local iphash = minetest.sha1(ip)
-        if data.suggestion == "deny" then
-          cache[iphash] = 2
-        elseif cache[iphash] ~= 2 then
-          cache[iphash] = 1
-        end
-        vps_blocker.handle_player(name, ip)
-      else minetest.log("error", "vps_blocker: Incorrect nastyhosts request while checking "..name.." ["..ip.."]!")
-      end
-    end
-    http.fetch(req, callback)
+local checkers = {}
 
-  else --  Second may iphub request
-    local ireq = {
-      ["url"] = "http://v2.api.iphub.info/ip/"..ip,
-      ["extra_headers"] = {"X-Key: "..iphub_key}
-    }
-    local icallback = function(result)
-      local data = minetest.parse_json(result.data)
-      if result.completed and result.succeeded and data and data.block then --  Correct request
-        local iphash = minetest.sha1(ip)
-        if data.block == 1 then
-          cache[iphash] = 2
-        elseif cache[iphash] ~= 2 then
-          cache[iphash] = 1
+--[[
+vps_blocker.register_check(check):
+passed check is a array:
+
+getreq(ip) return req, callback or nil, err for failed
+
+callback func will get the result of the req and is supposed
+to return true for allow and false for denying the client
+nil, err for failed requests
+
+active = true
+If the checker is currently working
+
+The checker can store any other data inside this table.
+]]
+
+function vps_blocker.register_checker(check)
+  assert(type(check) == "table")
+  assert(type(check.getreq) == "function")
+  --  Dummy testing function:
+  local req, call = check.getreq("0.0.0.0")
+  assert(type(req) == "table")
+  assert(type(req.url == "string"))
+  assert(type(call) == "function")
+  table.insert(checkers, check)
+end
+
+--  Load checkers
+dofile(minetest.get_modpath(minetest.get_current_modname()).. "/checker.lua")
+
+--  Add the main ipcheckup function
+local function check_ip(name, ip, hash)
+  --  Loop throught the list of checkers and use one
+  local checked = false
+  for _, check in pairs(checkers) do
+    if check.active then
+      local req, call = check.getreq(ip)
+      if req then
+        function callback(result)
+          local pass, err = call(result)
+          if pass then
+            cache[hash] = 1
+            minetest.log("action", "vps_blocker: Passing good-ip-player "..name.." ["..ip.."]")
+          elseif pass == false then
+            cache[hash] = 2
+            minetest.log("action", "vps_blocker: Kicking bad-ip-player "..name.." ["..ip.."]")
+          else minetest.log("error", "vps_blocker: Callback-Error "..err.." while checking "..name.." ["..ip.."]!")
+          end
         end
-        vps_blocker.handle_player(name, ip)
-      else minetest.log("error", "vps_blocker: Incorrect iphub request while checking "..name.." ["..ip.."]!")
-      end
-      if result.code == 429 then --  Iphub request limit reached!
-        minetest.log("error", "vps_blocker: IPhub Limit reached! Checking with nastyhosts instead until next restart!")
-        iphub_limit_reached = true
+        http.fetch(req, callback)
+        checked = true
+        break
+      else minetest.log("error", "vps_blocker: Checker failed to create requests for "..name.." ["..ip.."]!")
       end
     end
-    http.fetch(ireq, icallback)
+  end
+  --  Report error if no working was found
+  if not checked then
+    minetest.log("error", "vps_blocker: No working checker found!")
   end
 end
 
@@ -74,14 +88,13 @@ function vps_blocker.handle_player(name, ip)
     return
   end
   if cache[iphash] == 1 or storage:get_int(name) == 1 then
-    minetest.log("action", "vps_blocker: Passing good-ip-player "..name.." ["..ip.."]")
     return
   end
   if not cache[iphash] then
-    vps_blocker.check_ip(name, ip)
+    check_ip(name, ip, iphash)
+    return
   end
   if cache[iphash] == 2 then
-    minetest.log("action", "vps_blocker: Kicking bad-ip-player "..name.." ["..ip.."]")
     local player = minetest.get_player_by_name(name)
     if player then
       minetest.kick_player(name, kick_message)
@@ -90,7 +103,7 @@ function vps_blocker.handle_player(name, ip)
   end
 end
 
---  Do handle_player on prejoin and norma join
+--  Do handle_player on prejoin and normal join
 minetest.register_on_prejoinplayer(vps_blocker.handle_player)
 minetest.register_on_joinplayer(function(player)
   local name = player:get_player_name()
