@@ -27,13 +27,14 @@ to return true for allow and false for denying the client
 nil, err for failed requests
 
 active = true
-If the checker is currently working
+If the checker is currently working is true by default
 
 The checker can store any other data inside this table.
 ]]
 
 function vps_blocker.register_checker(check)
   assert(type(check) == "table")
+  check.active = true
   assert(type(check.getreq) == "function")
   --  Dummy testing function:
   local req, call = check.getreq("0.0.0.0")

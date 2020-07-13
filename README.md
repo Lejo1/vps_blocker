@@ -27,6 +27,12 @@ To use iphub.info you need to register there(recommend)
 You get 1000 requests/day for free  
 iphub_key = 123
 
+###### getipintel.net
+
+You must set an own contact email for getipintel.net  
+Please first go to the webpage and read what it's used for!  
+getipintel_contact = example@example.com
+
 ###### proxycheck.io
 
 For a higher request limit 1000 instead of 100 requests and dashboard register at there webpage

@@ -28,7 +28,34 @@ if iphub_key then
     return req, callback
   end
 
-  check.active = true
+  vps_blocker.register_checker(check)
+end
+
+--  Getipintel.net
+
+local contact = minetest.settings:get("getipintel_contact")
+if contact then
+  local check = {}
+  function check.getreq(ip)
+    local req = {
+      ["url"] = "https://check.getipintel.net/check.php?contact="..contact.."&ip="..ip
+    }
+    local callback = function(result)
+      if result.code == 429 then --  Iphub request limit reached!
+        check.active = false
+        return nil, "Getipintel Limit reached!"
+      end
+      local data = tonumber(result.data)
+      if result.completed and result.succeeded and result.code == 200 and data then --  Correct request
+        if data > 0.99 then
+          return false
+        else return true
+        end
+      else return nil, "Incorrect getipintel request!"
+      end
+    end
+    return req, callback
+  end
 
   vps_blocker.register_checker(check)
 end
@@ -55,6 +82,7 @@ do
           end
         elseif data.status == "denied" and string.find(data.message, "exhausted") then
           check.active = false
+          return nil, "Proxycheck Limit reached!"
         else return nil, (data.status or "error") .. ": "..(data.message or "Bad request-result!")
         end
       else return nil, "Incorrect iphub request!"
@@ -62,8 +90,6 @@ do
     end
     return req, callback
   end
-
-  check.active = true
 
   vps_blocker.register_checker(check)
 end
