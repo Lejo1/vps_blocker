@@ -55,7 +55,7 @@ local function check_ip(name, ip, hash)
     if check.active then
       local req, call = check.getreq(ip)
       if req then
-        function callback(result)
+        local function callback(result)
           local pass, err = call(result)
           if pass then
             cache[hash] = 1
