@@ -49,7 +49,11 @@ dofile(minetest.get_modpath(minetest.get_current_modname()).. "/checker.lua")
 
 -- Ensure ip is correctly formatted
 local function clean_ip(ip)
-  return string.match(ip, "%d+.%d+.%d+.%d+")
+  local ipv4 = string.match(ip, "%d+.%d+.%d+.%d+")
+  if ipv4 then
+    return ipv4
+  end
+  return string.match(ip, "%x*:%x*:%x*:%x*:%x*:%x*:%x*:%x*")
 end
 
 --  Add the main ipcheckup function
