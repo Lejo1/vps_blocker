@@ -47,6 +47,11 @@ end
 --  Load checkers
 dofile(minetest.get_modpath(minetest.get_current_modname()).. "/checker.lua")
 
+-- Ensure ip is correctly formatted
+local function clean_ip(ip)
+  return string.match(ip, "%d+.%d+.%d+.%d+")
+end
+
 --  Add the main ipcheckup function
 local function check_ip(name, ip, hash)
   --  Loop throught the list of checkers and use one
@@ -80,7 +85,8 @@ local function check_ip(name, ip, hash)
 end
 
 --  Add a function which handels what do do(check, kick, nth...)
-function vps_blocker.handle_player(name, ip)
+function vps_blocker.handle_player(name, raw_ip)
+  local ip = clean_ip(raw_ip)
   if not ip or not name then
     return
   end
